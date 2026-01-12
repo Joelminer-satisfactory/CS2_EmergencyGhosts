@@ -4,14 +4,21 @@
 	<!--Name of the mod to display to players-->
 	<DisplayName Value="EmergencyGhosts" />
 	<!--Short description of the mod-->
-	<ShortDescription Value="This is a short description" />
+	<ShortDescription Value="Allows emergency vehicles (police cars, firetrucks and ambulances) to ghost through traffic without collision." />
 	<!--Long description of the mod. Single line or multi line. Supports minimal markdown subset-->
 	<!--LongDescription Value="This is a long description" /-->
 	<LongDescription>
-This is a long description
+		Allows emergency vehicles (police cars, firetrucks and ambulances) to ghost through traffic without collision.
+		# Behaviour
+		- By default emergency vehicles will move at 50% speed to encourage maintaining a smooth traffic flow. Speed can be adjusted in the mod settings.
+		- By default, the ghosting is only active when a vehicle is responding to an emergency or transporting a patient. This can be changed to always allow ghosting in the mod settings.
+		# Required mods
+		- Collision be gone, required to prevent weirdness when clipping through other vehicles
+		**Thumbnail image**
+		The thumbnail image is ai-generated, I will update it when I have the time.
 	</LongDescription>
 	<!--Thumbnail-->
-	<Thumbnail Value="Properties/Thumbnail.png" />
+	<Thumbnail Value="Properties/EmergencyGhostsThumbnail.png" />
 	<!--Screenshot, can be set multiple times-->
 	<Screenshot Value="" />
 	<!--Tag, can be set multiple times-->
