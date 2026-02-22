@@ -67,7 +67,12 @@ public class LocaleEN : IDictionarySource
             {
                 ((ModSetting)m_Setting).GetOptionWarningLocaleID("ResetButton"),
                 "Are you sure you want to reset all settings to their default values?"
+            },
+            {
+                ((ModSetting)m_Setting).GetOptionLabelLocaleID("versionInfo"),
+                "Version 1.0.5"
             }
+
         };
     }
 

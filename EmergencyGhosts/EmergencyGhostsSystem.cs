@@ -1,9 +1,12 @@
-﻿using EmergencyGhosts;
+﻿using Colossal.Entities;
+using Colossal.Logging;
+using EmergencyGhosts;
 using Game;
 using Game.Common;
 using Game.Creatures;
 using Game.Net;
 using Game.Prefabs;
+using Game.Simulation;
 using Game.Tools;
 using Game.Vehicles;
 using System;
@@ -16,6 +19,7 @@ using UnityEngine.Scripting;
 
 public partial class EmergencyGhostsSystem : GameSystemBase
 {
+
     private EntityQuery m_VehicleQuery;
 
     [Preserve]
@@ -70,6 +74,8 @@ public partial class EmergencyGhostsSystem : GameSystemBase
 
             Car car = em.GetComponentData<Car>(entity);
             Game.Vehicles.Ambulance ambulance = em.GetComponentData<Game.Vehicles.Ambulance>(entity);
+            Game.Vehicles.PoliceCar policeCar = em.GetComponentData<Game.Vehicles.PoliceCar>(entity);
+            Game.Vehicles.FireEngine fireEngine = em.GetComponentData<Game.Vehicles.FireEngine>(entity);
             if (((int)car.m_Flags & 1u) == 0 && ((int)ambulance.m_State & 4u) == 0 && ((int)ambulance.m_State & 2u) == 0)
             {
                 if (Mod.m_Setting.EmergencyOnly)
@@ -77,6 +83,28 @@ public partial class EmergencyGhostsSystem : GameSystemBase
                     continue;
                 }
             }
+
+            if (em.HasComponent<Game.Vehicles.FireEngine>(entity) && fireEngine.m_TargetRequest != Entity.Null && em.HasComponent<FireRescueRequest>(fireEngine.m_TargetRequest))
+            {
+                FireRescueRequest fireRescueRequest = em.GetComponentData<FireRescueRequest>(fireEngine.m_TargetRequest);
+                //still not right
+                if (em.HasComponent<Car>(fireRescueRequest.m_Target) || em.HasComponent<Road>(fireRescueRequest.m_Target))
+                {
+                    continue;
+                }
+            }
+            if (em.HasComponent<Game.Vehicles.PoliceCar>(entity) && policeCar.m_TargetRequest != Entity.Null && em.HasComponent<FireRescueRequest>(policeCar.m_TargetRequest))
+            {
+                PoliceEmergencyRequest policeEmergencyRequest = em.GetComponentData<PoliceEmergencyRequest>(policeCar.m_TargetRequest);
+                //still not right
+                //TODO: find correct component type
+                if (em.HasComponent<Car>(policeEmergencyRequest.m_Target) || em.HasComponent<Road>(policeEmergencyRequest.m_Target))
+                {
+                    continue;
+                }
+            }
+            
+            
 
             Blocker blocker = em.GetComponentData<Blocker>(entity);
             CarCurrentLane currentLane = em.GetComponentData<CarCurrentLane>(entity);
@@ -136,16 +164,6 @@ public partial class EmergencyGhostsSystem : GameSystemBase
         {
             return false;
         }
-
-        // Ghost through cars, unless the car in front is ALSO an emergency vehicle
-        //if (em.HasComponent<Car>(blocker.m_Blocker))
-        //{
-        //    if (IsEmergencyVehicle(blocker.m_Blocker))
-        //    {
-        //        return false;
-        //    }
-        //    return true;
-        //}
 
         // Ghost through bicycles
         if (em.HasComponent<Bicycle>(blocker.m_Blocker))
