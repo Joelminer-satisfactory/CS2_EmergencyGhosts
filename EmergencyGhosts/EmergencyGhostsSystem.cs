@@ -1,26 +1,30 @@
-﻿using Colossal.Entities;
-using Colossal.Logging;
-using EmergencyGhosts;
+﻿using Colossal.Logging;
 using Game;
 using Game.Common;
 using Game.Creatures;
-using Game.Net;
+using Game.Events;
+using Game.Objects;
 using Game.Prefabs;
 using Game.Simulation;
 using Game.Tools;
 using Game.Vehicles;
 using System;
-using System.Runtime.CompilerServices;
-using System.Text;
+using System.Collections.Generic;
+using System.Reflection;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
+using Unity.Transforms;
 using UnityEngine.Scripting;
 
 public partial class EmergencyGhostsSystem : GameSystemBase
 {
 
     private EntityQuery m_VehicleQuery;
+    private EntityQuery m_accidentQuery;
+
+    // distance (meters) used to decide "near an accident"
+    private const float kFireEngineAccidentDistance = 100f;
 
     [Preserve]
     protected override void OnCreate()
@@ -30,7 +34,7 @@ public partial class EmergencyGhostsSystem : GameSystemBase
         // Defines the filter for entities this system cares about
         m_VehicleQuery = GetEntityQuery(new EntityQueryDesc
         {
-            All = new ComponentType[]
+            All = new ComponentType[] 
             {
                 ComponentType.ReadWrite<CarNavigation>(),
                 ComponentType.ReadWrite<Blocker>(),
@@ -44,9 +48,23 @@ public partial class EmergencyGhostsSystem : GameSystemBase
                 ComponentType.ReadOnly<Temp>()
             }
         });
+        m_accidentQuery = GetEntityQuery(new EntityQueryDesc
+        {
+            All = new ComponentType[]
+            {
+                ComponentType.ReadOnly<InvolvedInAccident>()
+            },
+            None = new ComponentType[]
+            {
+                ComponentType.ReadOnly<Deleted>(),
+                ComponentType.ReadOnly<Temp>()
+            }
+        });
 
         RequireForUpdate(m_VehicleQuery);
     }
+
+    public static ILog log = LogManager.GetLogger("EmergencyGhosts.Mod").SetShowsErrorsInUI(false);
 
     [Preserve]
     protected override void OnUpdate()
@@ -58,6 +76,7 @@ public partial class EmergencyGhostsSystem : GameSystemBase
 
         // Grabs all entities matching the query into a temporary array
         NativeArray<Entity> entities = m_VehicleQuery.ToEntityArray(Allocator.TempJob);
+        NativeArray<Entity> accident_entities = m_accidentQuery.ToEntityArray(Allocator.TempJob);
         EntityManager em = EntityManager;
 
         for (int i = 0; i < entities.Length; i++)
@@ -84,27 +103,73 @@ public partial class EmergencyGhostsSystem : GameSystemBase
                 }
             }
 
+
+
+            // If this is a fire engine with a valid request, check proximity to accidents.
+            bool fireEngineNearAccident = false;
             if (em.HasComponent<Game.Vehicles.FireEngine>(entity) && fireEngine.m_TargetRequest != Entity.Null && em.HasComponent<FireRescueRequest>(fireEngine.m_TargetRequest))
             {
-                FireRescueRequest fireRescueRequest = em.GetComponentData<FireRescueRequest>(fireEngine.m_TargetRequest);
-                //still not right
-                if (em.HasComponent<Car>(fireRescueRequest.m_Target) || em.HasComponent<Road>(fireRescueRequest.m_Target))
+                // try to get fire engine position
+                if (TryGetEntityPosition(entity, em, out float3 firePos))
                 {
-                    continue;
+                    // scan accident entities for proximity
+                    for (int j = 0; j < accident_entities.Length; j++)
+                    {
+                        Entity acc = accident_entities[j];
+                        if (acc == Entity.Null) continue;
+
+                        if (TryGetEntityPosition(acc, em, out float3 accPos))
+                        {
+                            float d = math.distance(firePos, accPos);
+                            log.Info((object)d);
+                            if (d <= kFireEngineAccidentDistance)
+                            {
+                                fireEngineNearAccident = true;
+                                break;
+                            }
+                        }
+                    }
                 }
             }
-            if (em.HasComponent<Game.Vehicles.PoliceCar>(entity) && policeCar.m_TargetRequest != Entity.Null && em.HasComponent<FireRescueRequest>(policeCar.m_TargetRequest))
+            
+            if (fireEngineNearAccident)
             {
-                PoliceEmergencyRequest policeEmergencyRequest = em.GetComponentData<PoliceEmergencyRequest>(policeCar.m_TargetRequest);
-                //still not right
-                //TODO: find correct component type
-                if (em.HasComponent<Car>(policeEmergencyRequest.m_Target) || em.HasComponent<Road>(policeEmergencyRequest.m_Target))
+                // do not modify blocker/navigation for this update — let regular behavior apply
+                continue;
+            }
+
+            // If this is a fire engine with a valid request, check proximity to accidents.
+            bool policeCarNearAccident = false;
+            if (em.HasComponent<Game.Vehicles.PoliceCar>(entity) && policeCar.m_TargetRequest != Entity.Null && em.HasComponent<PoliceEmergencyRequest>(policeCar.m_TargetRequest))
+            {
+                // try to get fire engine position
+                if (TryGetEntityPosition(entity, em, out float3 pos))
                 {
-                    continue;
+                    // scan accident entities for proximity
+                    for (int j = 0; j < accident_entities.Length; j++)
+                    {
+                        Entity acc = accident_entities[j];
+                        if (acc == Entity.Null) continue;
+
+                        if (TryGetEntityPosition(acc, em, out float3 accPos))
+                        {
+                            float d = math.distance(pos, accPos);
+                            if (d <= kFireEngineAccidentDistance)
+                            {
+                                policeCarNearAccident = true;
+                                break;
+                            }
+                        }
+                    }
                 }
             }
-            
-            
+
+            if (policeCarNearAccident)
+            {
+                // do not modify blocker/navigation for this update — let regular behavior apply
+                continue;
+            }
+
 
             Blocker blocker = em.GetComponentData<Blocker>(entity);
             CarCurrentLane currentLane = em.GetComponentData<CarCurrentLane>(entity);
@@ -136,6 +201,31 @@ public partial class EmergencyGhostsSystem : GameSystemBase
             }
         }
         entities.Dispose();
+        accident_entities.Dispose();
+    }
+
+    // Try to obtain a world-space position for an entity.
+    // First tries common transform components (LocalToWorld, Translation),
+    // then falls back to reflectively inspecting a few common component structs for a float3 field.
+    private bool TryGetEntityPosition(Entity e, EntityManager em, out float3 position)
+    {
+        position = float3.zero;
+        try
+        {
+            if (e == Entity.Null) return false;
+
+            if (em.HasComponent<Transform>(e))
+            {
+                var t = em.GetComponentData<Transform>(e);
+                position = t.m_Position;
+                return true;
+            }
+        }
+        catch
+        {
+            // best-effort only
+        }
+        return false;
     }
 
     private bool ShouldClearBlocker(CarCurrentLane currentLane, Blocker blocker)

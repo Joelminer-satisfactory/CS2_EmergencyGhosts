@@ -70,7 +70,7 @@ public class LocaleEN : IDictionarySource
             },
             {
                 ((ModSetting)m_Setting).GetOptionLabelLocaleID("versionInfo"),
-                "Version 1.0.5"
+                "Version 1.0.5dev3"
             }
 
         };
