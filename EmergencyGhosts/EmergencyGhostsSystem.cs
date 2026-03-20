@@ -127,7 +127,7 @@ public partial class EmergencyGhostsSystem : GameSystemBase
         }
 
         // Do not clear if the blockage is a specific type (None(0), Continuing(1), Crossing(2), Signal(3), Temporary(4), Limit(5), Caution(6), Spawn(7), Oncoming(8))
-        if ((int)blocker.m_Type == 0 || (int)blocker.m_Type == 4 ||(int)blocker.m_Type == 5 || (int)blocker.m_Type == 6 || (int)blocker.m_Type == 7 || (int)blocker.m_Type == 8)
+        if ((int)blocker.m_Type == 4 ||(int)blocker.m_Type == 5 || (int)blocker.m_Type == 6 || (int)blocker.m_Type == 7)
         {
             return false;
         }
