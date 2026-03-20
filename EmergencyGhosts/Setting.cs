@@ -47,7 +47,7 @@ namespace EmergencyGhosts
 
         [SettingsUISection("Main", "Info")]
         [SettingsUIMultilineText]
-        public string versionInfo => "dev";
+        public string versionInfo => "1.1.0";
         public override void SetDefaults()
         {
             Enabled = true;
