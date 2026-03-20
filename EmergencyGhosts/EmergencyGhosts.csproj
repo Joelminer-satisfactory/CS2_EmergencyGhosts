@@ -14,6 +14,9 @@
 	  <EmbeddedResource Remove="NewFolder\**" />
 	  <None Remove="NewFolder\**" />
 	</ItemGroup>
+	<ItemGroup>
+	  <None Remove="EmergencyGhostsSystem.cs.logbak" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<Reference Include="Game">

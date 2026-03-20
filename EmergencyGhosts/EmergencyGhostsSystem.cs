@@ -1,21 +1,25 @@
-﻿using EmergencyGhosts;
+﻿using Colossal.Logging;
 using Game;
 using Game.Common;
 using Game.Creatures;
-using Game.Net;
+using Game.Events;
+using Game.Objects;
 using Game.Prefabs;
+using Game.Simulation;
 using Game.Tools;
 using Game.Vehicles;
 using System;
-using System.Runtime.CompilerServices;
-using System.Text;
+using System.Collections.Generic;
+using System.Reflection;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
+using Unity.Transforms;
 using UnityEngine.Scripting;
 
 public partial class EmergencyGhostsSystem : GameSystemBase
 {
+
     private EntityQuery m_VehicleQuery;
 
     [Preserve]
@@ -26,7 +30,7 @@ public partial class EmergencyGhostsSystem : GameSystemBase
         // Defines the filter for entities this system cares about
         m_VehicleQuery = GetEntityQuery(new EntityQueryDesc
         {
-            All = new ComponentType[]
+            All = new ComponentType[] 
             {
                 ComponentType.ReadWrite<CarNavigation>(),
                 ComponentType.ReadWrite<Blocker>(),
@@ -40,9 +44,10 @@ public partial class EmergencyGhostsSystem : GameSystemBase
                 ComponentType.ReadOnly<Temp>()
             }
         });
-
         RequireForUpdate(m_VehicleQuery);
     }
+
+    public static ILog log = LogManager.GetLogger("EmergencyGhosts.Mod").SetShowsErrorsInUI(false);
 
     [Preserve]
     protected override void OnUpdate()
@@ -77,13 +82,13 @@ public partial class EmergencyGhostsSystem : GameSystemBase
                     continue;
                 }
             }
-
             Blocker blocker = em.GetComponentData<Blocker>(entity);
             CarCurrentLane currentLane = em.GetComponentData<CarCurrentLane>(entity);
-
-            if (ShouldClearBlocker(currentLane, blocker))
+            CarNavigation navigation = em.GetComponentData<CarNavigation>(entity);
+            Game.Objects.Transform vehicleTransform = em.GetComponentData<Game.Objects.Transform>(entity);
+            float distance = math.distance(vehicleTransform.m_Position, navigation.m_TargetPosition);
+            if (ShouldClearBlocker(currentLane, blocker, distance))
             {
-                CarNavigation navigation = em.GetComponentData<CarNavigation>(entity);
                 PrefabRef prefabRef = em.GetComponentData<PrefabRef>(entity);
 
                 // Speed calculation logic
@@ -110,15 +115,19 @@ public partial class EmergencyGhostsSystem : GameSystemBase
         entities.Dispose();
     }
 
-    private bool ShouldClearBlocker(CarCurrentLane currentLane, Blocker blocker)
+    private bool ShouldClearBlocker(CarCurrentLane currentLane, Blocker blocker, float targetDistance)
     {
+        if(targetDistance < 1f)
+        {
+            return false;
+        }
         if (blocker.m_Blocker == Entity.Null)
         {
             return false;
         }
 
-        // Do not clear if the blockage is a specific type (None, Continuing, Crossing,	Signal,	Temporary, Limit, Caution, Spawn, Oncoming)
-        if ((int)blocker.m_Type == 5 || (int)blocker.m_Type == 6 || (int)blocker.m_Type == 7)
+        // Do not clear if the blockage is a specific type (None(0), Continuing(1), Crossing(2), Signal(3), Temporary(4), Limit(5), Caution(6), Spawn(7), Oncoming(8))
+        if ((int)blocker.m_Type == 0 || (int)blocker.m_Type == 4 ||(int)blocker.m_Type == 5 || (int)blocker.m_Type == 6 || (int)blocker.m_Type == 7 || (int)blocker.m_Type == 8)
         {
             return false;
         }
@@ -136,16 +145,6 @@ public partial class EmergencyGhostsSystem : GameSystemBase
         {
             return false;
         }
-
-        // Ghost through cars, unless the car in front is ALSO an emergency vehicle
-        //if (em.HasComponent<Car>(blocker.m_Blocker))
-        //{
-        //    if (IsEmergencyVehicle(blocker.m_Blocker))
-        //    {
-        //        return false;
-        //    }
-        //    return true;
-        //}
 
         // Ghost through bicycles
         if (em.HasComponent<Bicycle>(blocker.m_Blocker))

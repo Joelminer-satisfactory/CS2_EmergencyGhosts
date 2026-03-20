@@ -21,6 +21,8 @@ namespace EmergencyGhosts
         public const string kSliderGroup = "Slider";
 
         public const string kButtonGroup = "Button";
+        
+        public const string kInfoGroup = "Info";
 
         [SettingsUISection("Main", "Toggle")]
         public bool Enabled { get; set; } = true;
@@ -43,6 +45,9 @@ namespace EmergencyGhosts
             }
         }
 
+        [SettingsUISection("Main", "Info")]
+        [SettingsUIMultilineText]
+        public string versionInfo => "1.1.0";
         public override void SetDefaults()
         {
             Enabled = true;
