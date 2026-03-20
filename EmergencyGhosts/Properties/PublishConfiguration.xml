@@ -1,8 +1,8 @@
 ﻿<Publish>
 	<!--Id must be set in order to update existed mod. it is not required for publishing mod for the first time-->
-	<ModId Value="" />
+	<ModId Value="131525" />
 	<!--Name of the mod to display to players-->
-	<DisplayName Value="EmergencyGhosts" />
+	<DisplayName Value="Emergency Ghosts" />
 	<!--Short description of the mod-->
 	<ShortDescription Value="Allows emergency vehicles (police cars, firetrucks and ambulances) to ghost through traffic without collision." />
 	<!--Long description of the mod. Single line or multi line. Supports minimal markdown subset-->
@@ -12,8 +12,6 @@
 		# Behaviour
 		- By default emergency vehicles will move at 50% speed to encourage maintaining a smooth traffic flow. Speed can be adjusted in the mod settings.
 		- By default, the ghosting is only active when a vehicle is responding to an emergency or transporting a patient. This can be changed to always allow ghosting in the mod settings.
-		# Required mods
-		- Collision be gone, required to prevent weirdness when clipping through other vehicles
 		**Thumbnail image**
 		The thumbnail image is ai-generated, I will update it when I have the time.
 	</LongDescription>
@@ -22,7 +20,7 @@
 	<!--Screenshot, can be set multiple times-->
 	<Screenshot Value="" />
 	<!--Tag, can be set multiple times-->
-	<Tag Value="" />
+	<Tag Value="Code Mod" />
 	<!--Link to the forum post where the mod can be discussed-->
 	<ForumLink Value="" />
 	<!--Version of the mod-->
@@ -34,7 +32,7 @@
 	<!--Required DLC, can be set multiple times. Supported values are "Landmark Buildings", "San Fransisco Set", "Beach Properties", "Urban Promenades", "Modern Architecture"-->
 	<RequiredDLC Value="" />
 	<!--Change log for new version. Single line or multi line. Supports minimal markdown subset-->
-	<ChangeLog Value="" />
+	<ChangeLog Value="Potential fix for vehicles spinning when responding to accidents. Removed need for disable accidents" />
 	<!--<ChangeLog>
 	</ChangeLog>-->
 	<!--External link, can be set multiple times. supported types are "discord", "github", "youtube", "twitch", "x", "paypal", "patreon", "buymeacoffee", "kofi", "crowdin", "gitlab", "gofundme"-->
